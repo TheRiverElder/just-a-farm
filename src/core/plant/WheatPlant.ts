@@ -6,6 +6,7 @@ import type Item from "../item/Item";
 import PlantItem from "../item/PlantItem";
 import TestItem from "../item/TestItem";
 import WrapperEventListener from "../util/event/WrappedEventListener";
+import { constraints } from "../util/math/MatlUtils";
 import Plant from "./Plant";
 import TestPlant from "./TestPlant";
 
@@ -20,7 +21,7 @@ export default class WheatPlant extends Plant {
         this.growSpeed = growSpeed;
 
         this.health = 1;
-        this.condition = 1;
+        this.condition = 0;
     }
 
     render(graphics: Graphics): void {
@@ -38,7 +39,10 @@ export default class WheatPlant extends Plant {
     }
 
     tick() {
-        this.progress = Math.min(this.progress + this.game.time.deltaTimeInSeconds * this.growSpeed, 1);
+        this.health = constraints(this.health + this.condition, 0, 1.5);
+        let grown = this.game.time.deltaTimeInSeconds * this.growSpeed;
+        grown *= this.health;
+        this.progress = constraints(this.progress + grown, 0, 1);
     }
 
     onHarvest(field: Field): Item[] {
