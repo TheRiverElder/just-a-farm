@@ -20,7 +20,7 @@ export default class Game {
         const products = plant.onHarvest(field);
         products.forEach(item => this.addToInventory(item));
 
-        field.plant = null;
+        field.setContent(null);
     }
 
     use(slot: InventorySlot, field: Field) {

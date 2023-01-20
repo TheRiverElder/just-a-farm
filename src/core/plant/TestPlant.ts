@@ -35,8 +35,11 @@ export default class TestPlant extends Plant {
         this.progress = Math.min(this.progress + this.game.time.deltaTimeInSeconds * this.growSpeed, 1);
     }
 
-    onHarvest(field: Field): Item[] {
+    onRemoveFromField(field: Field): void {
         this.game.tickEventDispatcher.removeListener(this.ticker);
+    }
+
+    onHarvest(field: Field): Item[] {
 
         if (this.progress >= 1) {
             const childPlant = new TestPlant(this.game, this.growSpeed);

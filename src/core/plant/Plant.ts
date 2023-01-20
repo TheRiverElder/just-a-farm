@@ -16,5 +16,6 @@ export default abstract class Plant {
     abstract render(graphics: Graphics): void;
 
     abstract onAddToField(field: Field): void;
+    abstract onRemoveFromField(field: Field): void;
     abstract onHarvest(field: Field): Item[];
 }

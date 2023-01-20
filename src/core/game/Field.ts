@@ -10,4 +10,16 @@ export default class Field {
         this.position = position;
         this.plant = plant;
     }
+
+    setContent(plant: Nullable<Plant> = null): Nullable<Plant> {
+        const oldPlant = this.plant;
+        if (oldPlant) {
+            oldPlant.onRemoveFromField(this);
+        }
+        this.plant = plant;
+        if (plant) {
+            plant.onAddToField(this);
+        }
+        return oldPlant;
+    }
 }

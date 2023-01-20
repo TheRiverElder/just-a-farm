@@ -5,6 +5,8 @@ import type Game from "../game/Game";
 import type Item from "../item/Item";
 import PlantItem from "../item/PlantItem";
 import TestItem from "../item/TestItem";
+import WheatItem from "../item/WheatItem";
+import WheatSeedItem from "../item/WheatSeedItem";
 import WrapperEventListener from "../util/event/WrappedEventListener";
 import { constraints } from "../util/math/MatlUtils";
 import Plant from "./Plant";
@@ -20,14 +22,18 @@ export default class WheatPlant extends Plant {
         super(game);
         this.growSpeed = growSpeed;
 
-        this.health = 1;
-        this.condition = 0;
+        this.health = 1.0;
+        this.condition = 0.0;
     }
 
     render(graphics: Graphics): void {
+        const r = Math.floor(0xff * this.progress);
+        const g = 0xff;
+        const b = 0x00;
+        const color = ((r << 16) + (g << 8) + b);
         const radius = (this.progress) * 8 + 4;
         graphics.lineStyle(0);
-        graphics.beginFill(0x00ffff);
+        graphics.beginFill(color);
         graphics.drawCircle(16, 16, radius);
         graphics.endFill();
     }
@@ -39,20 +45,26 @@ export default class WheatPlant extends Plant {
     }
 
     tick() {
-        this.health = constraints(this.health + this.condition, 0, 1.5);
-        let grown = this.game.time.deltaTimeInSeconds * this.growSpeed;
-        grown *= this.health;
-        this.progress = constraints(this.progress + grown, 0, 1);
+        this.health = constraints(this.health + this.condition, 0.5, 1.5);
+        const deltaProgress = this.game.time.deltaTimeInSeconds * this.growSpeed * this.health;
+        this.progress = constraints(this.progress + deltaProgress, 0, 1);
+    }
+
+    onRemoveFromField(field: Field): void {
+        this.game.tickEventDispatcher.removeListener(this.ticker);
     }
 
     onHarvest(field: Field): Item[] {
-        this.game.tickEventDispatcher.removeListener(this.ticker);
 
         if (this.progress >= 1) {
-            const childPlant = new TestPlant(this.game, this.growSpeed);
+            const seeds = [new WheatSeedItem(this.game)];
+            const hasExtraPlant = Math.random() < 0.2;
+            if (hasExtraPlant) {
+                seeds.push(new WheatSeedItem(this.game));
+            }
             return [
-                new PlantItem(this.game, childPlant), 
-                new TestItem(this.game),
+                ...seeds, 
+                new WheatItem(this.game),
             ];
         } else return [new PlantItem(this.game, this)];
     }

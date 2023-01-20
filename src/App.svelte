@@ -5,9 +5,8 @@
  
     import Game from "./core/game/Game";
     import GameGUI from "./core/game/GameGUI";
-    import PlantItem from "./core/item/PlantItem";
     import TestItem from "./core/item/TestItem";
-    import TestPlant from "./core/plant/TestPlant";
+    import WheatSeedItem from "./core/item/WheatSeedItem";
     import WrapperEventListener from "./core/util/event/WrappedEventListener";
     import DebugRenderer from "./DebugRenderer";
 
@@ -22,13 +21,15 @@
 		game.initialize();
 
 		{ // initialize test data
-			const testItem = new TestItem(game);
-			testItem.amount = 1;
-			game.addToInventory(testItem);
 
-			const plantItem = new PlantItem(game, new TestPlant(game, 1.0 / 60));
-			plantItem.amount = 1;
-			game.addToInventory(plantItem);
+			const items = [
+				new TestItem(game),
+				new WheatSeedItem(game),
+			];
+			items.forEach(item => {
+				item.amount = 1;
+				game.addToInventory(item);
+			});
 
 			const fields: Field[] = [];
 			for (let y = 0; y < 5; y++) {

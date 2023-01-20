@@ -9,6 +9,7 @@ export default abstract class Item {
 
     constructor(game: Game) {
         this.game = game;
+        this.amount = 1.0;
     }
 
     abstract render(graphics: Graphics): void;

@@ -17,9 +17,8 @@ export default class PlantItem extends Item {
     }
 
     onUseAtField(field: Field): void {
-        field.plant = this.plant;
+        field.setContent(this.plant);
         this.amount = 0;
-        this.plant.onAddToField(field);
     }
 
 }
