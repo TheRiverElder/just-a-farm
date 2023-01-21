@@ -13,17 +13,4 @@ export default class InventorySlot {
         this.index = index;
         this.item = item;
     }
-
-    render(graphics: Graphics) {
-        graphics.clear();
-        graphics.lineStyle(2, 0x0000ff, 0.5, 0);
-        graphics.beginFill(0x101010, 0.5);
-        graphics.drawRect(0, 0, 32, 32)
-        graphics.endFill();
-
-        const item = this.item;
-        if (item) {
-            item.render(graphics);
-        }
-    }
 }

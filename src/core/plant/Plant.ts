@@ -1,8 +1,8 @@
-import type { Graphics } from "pixi.js";
 import type { double } from "../BaseTypes";
 import type Field from "../game/Field";
 import type Game from "../game/Game";
 import type Item from "../item/Item";
+import type Renderer from "../renderer/Renderer";
 
 export default abstract class Plant {
     public readonly game: Game;
@@ -13,7 +13,7 @@ export default abstract class Plant {
         this.game = game;
     }
 
-    abstract render(graphics: Graphics): void;
+    abstract getRenderer(): Renderer;
 
     abstract onAddToField(field: Field): void;
     abstract onRemoveFromField(field: Field): void;

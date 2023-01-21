@@ -1,5 +1,5 @@
 import type { double, int, Nullable } from "../BaseTypes";
-import type Field from "./Field";
+import Field from "./Field";
 import GameTime from "./GameTime";
 import InventorySlot from "./InventorySlot";
 import type Item from "../item/Item";
@@ -7,6 +7,10 @@ import EventDispatcher from "../util/event/EventDispatcher";
 import WrapperEventListener from "../util/event/WrappedEventListener";
 import Timer from "../util/timer/Timer";
 import type { Point } from "pixi.js";
+import IncreasingNumberGenerator from "../util/math/IncreasingNumberGenerator";
+import InventorySlotItemMutationEvent from "../event/InventorySlotItemMutationEvent";
+import { MutationType } from "../event/MutationType";
+import type FieldPlantMutationEvent from "../event/FieldPlantMutationEvent";
 
 export default class Game {
     storage: Item[] = [];
@@ -31,6 +35,7 @@ export default class Game {
 
         if (item.amount <= 0) {
             slot.item = null;
+            this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.REMOVE));
         }
     }
 
@@ -43,14 +48,16 @@ export default class Game {
         const oldItem = slot.item;
         if (!!oldItem && oldItem.amount > 0) {
             replacement.push(oldItem);
+            this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, oldItem, MutationType.REMOVE));
         }
 
         this.storage.splice(storageIndex, 1, ...replacement);
 
-        slot.item = item;
-
         if (item.amount <= 0) {
             slot.item = null;
+        } else {
+            slot.item = item;
+            this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.ADD));
         }
     }
 
@@ -62,12 +69,14 @@ export default class Game {
 
         this.storage.splice(finalStorageIndex, 0, item);
         slot.item = null;
+        this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.REMOVE));
     }
 
     addToInventory(item: Item): boolean {
         for (const slot of this.inventory) {
             if (!slot.item) {
                 slot.item = item;
+                this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.ADD));
                 return true;
             }
         }
@@ -77,6 +86,14 @@ export default class Game {
     addToStorage(item: Item): boolean {
         this.storage.push(item);
         return true;
+    }
+
+    private readonly fieldUidGenerator = new IncreasingNumberGenerator();
+
+    addField(position: Point): Field {
+        const field = new Field(this.fieldUidGenerator.generate(), position.clone());
+        this.land.push(field);
+        return field;
     }
 
     findField(position: Point): Nullable<Field> {
@@ -89,8 +106,10 @@ export default class Game {
     time: GameTime = new GameTime(0, 0);
 
     readonly timer: Timer = new Timer(this.tickPeriod);
-    readonly tickEventDispatcher: EventDispatcher = new EventDispatcher();
-    readonly renderEventDispatcher: EventDispatcher = new EventDispatcher();
+    readonly tickEventDispatcher = new EventDispatcher();
+    readonly renderEventDispatcher = new EventDispatcher();
+    readonly fieldPlantMutationEventDispatcher = new EventDispatcher<FieldPlantMutationEvent>();
+    readonly inventorySlotItemMutationEventDispatcher = new EventDispatcher<InventorySlotItemMutationEvent>();
 
     public initialize() {
         this.inventory = Array(6).fill(0).map((_, index) => new InventorySlot(this, index));

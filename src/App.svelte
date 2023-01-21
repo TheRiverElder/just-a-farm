@@ -1,50 +1,19 @@
 <script lang="ts">
-    import { Point } from "pixi.js";
-	import { onMount } from "svelte";
-    import Field from "./core/game/Field";
- 
-    import Game from "./core/game/Game";
-    import GameGUI from "./core/game/GameGUI";
-    import TestItem from "./core/item/TestItem";
-    import WheatSeedItem from "./core/item/WheatSeedItem";
-    import WrapperEventListener from "./core/util/event/WrappedEventListener";
-    import DebugRenderer from "./DebugRenderer";
-
-
+	import { onDestroy, onMount } from "svelte";
+    import { testGame } from "./core/test/TestGame";
+    
 	let mountedElement: HTMLElement;
 	let debugText = ``;
+	let dispose: () => void = () => {};
 
 	onMount(() => {
 		if (!mountedElement) return;
-		
-		const game: Game = new Game();
-		game.initialize();
 
-		{ // initialize test data
+		dispose = testGame(mountedElement);
+	});
 
-			const items = [
-				new TestItem(game),
-				new WheatSeedItem(game),
-			];
-			items.forEach(item => {
-				item.amount = 1;
-				game.addToInventory(item);
-			});
-
-			const fields: Field[] = [];
-			for (let y = 0; y < 5; y++) {
-				for (let x = 0; x < 7; x++) {
-					fields.push(new Field(new Point(x, y)));
-				}
-			}
-			game.land.push(...fields);
-		}
-
-		const gameGUI = new GameGUI(game, mountedElement);
-		game.renderEventDispatcher.addListener(new WrapperEventListener(() => gameGUI.render()));
-
-		const debugRenderer = new DebugRenderer(game, (text: string) => (debugText = text));
-		game.renderEventDispatcher.addListener(new WrapperEventListener(() => debugRenderer.render()));
+	onDestroy(() => {
+		dispose();
 	});
 </script>
 

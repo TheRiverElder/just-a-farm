@@ -1,9 +1,12 @@
-import { Application, Container, FederatedPointerEvent, Graphics, Matrix, Point, Rectangle } from "pixi.js";
+import { Application, Container, DisplayObject, FederatedPointerEvent, Graphics, Matrix, Point, Rectangle } from "pixi.js";
 import type Game from "./Game";
 import "@pixi/math-extras";
 import type InventorySlot from "./InventorySlot";
-import type { Nullable } from "../BaseTypes";
-import type Field from "./Field";
+import type { int, Nullable } from "../BaseTypes";
+import WrapperEventListener from "../util/event/WrappedEventListener";
+import type FieldPlantMutationEvent from "../event/FieldPlantMutationEvent";
+import { MutationType } from "../event/MutationType";
+import type InventorySlotItemMutationEvent from "../event/InventorySlotItemMutationEvent";
 
 enum DraggingType {
     NONE,
@@ -11,7 +14,7 @@ enum DraggingType {
     LAND,
 }
 
-export default class GameRenderer {
+export default class GameGUI {
     readonly game: Game;
     readonly app: Application;
 
@@ -19,10 +22,10 @@ export default class GameRenderer {
     readonly inventoryView = new Container();
     readonly storageView = new Container();
     readonly landView = new Container();
-    readonly draggingItemView = new Graphics();
+    private draggingItemView: Nullable<DisplayObject> = null;
 
     private inventorySlotViews: Graphics[] = [];
-    private fieldViews: Graphics[] = [];
+    private fieldViews = new Map<int, Graphics>();
 
 
     constructor(game: Game, mountElement: HTMLElement) {
@@ -50,22 +53,31 @@ export default class GameRenderer {
             this.pointerMoveStartTargetPosition = this.landView.position.clone();
         };
 
-        const handleDraggingItemPointerDown = (event: FederatedPointerEvent, item: InventorySlot, originalView: Graphics) => {
+        const handleDraggingItemPointerDown = (event: FederatedPointerEvent, slot: InventorySlot, originalView: Graphics) => {
+            if (!slot.item) return;
             this.draggingType = DraggingType.ITEM;
             this.dragging = false;
-            this.draggingItemSlot = item;
+            this.draggingItemSlot = slot;
             
             this.pointerMoveStartPointerPosition = event.client.clone();
             this.pointerMoveStartTargetPosition = originalView.getGlobalPosition().clone();
-            this.draggingItemView.visible = true;
         };
 
         const handleDraggingPointerMove = (event: FederatedPointerEvent) => {
             if (this.draggingType === DraggingType.NONE) return;
+            const isStartDragging = !this.dragging;
             this.dragging = true;
 
             switch (this.draggingType) {
                 case DraggingType.ITEM: {
+                    if (isStartDragging && !this.draggingItemView && this.draggingItemSlot) {
+                        const item = this.draggingItemSlot.item;
+                        if (item) {
+                            this.draggingItemView = item.getRenderer().getDisplayObject();
+                            this.app.stage.addChild(this.draggingItemView);
+                        }
+                    }
+                    if (!this.draggingItemView) break;
                     const pointerPisition = event.client;
                     const delta = pointerPisition.clone().subtract(this.pointerMoveStartPointerPosition);
                     this.draggingItemView.position = delta.add(this.pointerMoveStartTargetPosition);
@@ -85,13 +97,27 @@ export default class GameRenderer {
 
         const handleDraggingPointerUp = (event: FederatedPointerEvent) => {
             if (this.draggingType === DraggingType.NONE) return;
-
-            this.draggingType = DraggingType.NONE;
+            
             this.pointerMoveStartPointerPosition = new Point();
             this.pointerMoveStartTargetPosition = new Point();
+            this.draggingItemSlot?.item?.getRenderer().dispose();
+
+            if (this.draggingType === DraggingType.ITEM) {
+                const item = this.draggingItemSlot.item;
+                if (!!item) {
+                    const slotView = this.inventorySlotViews[this.draggingItemSlot.index];
+                    if (slotView) {
+                        const renderer = item.getRenderer();
+                        renderer.reset();
+                        const view = renderer.getDisplayObject();
+                        view.position = new Point();
+                        slotView.addChild(view);
+                    }
+                }
+            }
+
             this.draggingItemSlot = null;
-            this.draggingItemView.clear();
-            this.draggingItemView.visible = false;
+            this.draggingType = DraggingType.NONE;
         };
 
         { // initialize inventory view
@@ -129,28 +155,37 @@ export default class GameRenderer {
             this.landView.position = new Point(100, 100);
             this.landView.interactive = false;
 
-            this.fieldViews = this.game.land.map((field) => {
+            const tileSize = new Point(32, 32);
+            this.game.land.forEach((field) => {
                 const view = new Graphics();
                 view.interactive = true;
-                view.position = field.position.clone().multiply(new Point(32, 32));
+                view.position = field.position.clone().multiply(tileSize);
 
                 view.on("pointerdown", handleDraggingLandPointerDown);
                 view.on("pointermove", handleDraggingPointerMove);
                 view.on("pointerup", (event) => {
-                    if (this.draggingType === DraggingType.ITEM && !!this.draggingItemSlot) {
-                        this.game.use(this.draggingItemSlot, field);
-                    }
+                    const draggingType = this.draggingType;
+                    const draggingItemSlot = this.draggingItemSlot;
                     handleDraggingPointerUp(event);
+                    if (draggingType === DraggingType.ITEM && !!draggingItemSlot) {
+                        this.game.use(draggingItemSlot, field);
+                    }
                 });
                 view.on("click", (event) => {
                     if (this.dragging) return;
                     this.game.harvest(field);
                 });
                 
-                return view;
-            });
 
-            this.landView.addChild(...this.fieldViews);
+                view.clear();
+                view.lineStyle(1, 0xffffff);
+                view.beginFill(0xffffff, 0.5);
+                view.drawRect(0, 0, 32, 32);
+                view.endFill();
+
+                this.fieldViews.set(field.uid, view);
+                this.landView.addChild(view);
+            });
         }
 
         { // initialize background
@@ -162,8 +197,35 @@ export default class GameRenderer {
             // this.backgroundView.on("pointerleave", handleDriggingPointerUp);
         }
 
-        this.app.stage.addChild(this.backgroundView, this.landView, this.storageView, this.inventoryView, this.draggingItemView);
+        this.app.stage.addChild(this.backgroundView, this.landView, this.storageView, this.inventoryView);
+
+        this.game.fieldPlantMutationEventDispatcher.addListener(this.fieldPlantMutationEventListener);
+        this.game.inventorySlotItemMutationEventDispatcher.addListener(this.inventorySlotItemMutationEventListener);
     }
+
+    private readonly fieldPlantMutationEventListener = new WrapperEventListener<FieldPlantMutationEvent>((event) => {
+        const renderer = event.plant.getRenderer();
+        if (event.mutationType === MutationType.ADD) {
+            const displayObject = renderer.getDisplayObject();
+            const fieldView: Graphics = this.fieldViews.get(event.field.uid);
+            fieldView?.addChild(displayObject);
+            renderer.render();
+        } else if (event.mutationType === MutationType.REMOVE) {
+            renderer.dispose();
+        }
+    });
+
+    private readonly inventorySlotItemMutationEventListener = new WrapperEventListener<InventorySlotItemMutationEvent>((event) => {
+        const renderer = event.item.getRenderer();
+        if (event.mutationType === MutationType.ADD) {
+            const displayObject = renderer.getDisplayObject();
+            const inventorySlotView: Graphics = this.inventorySlotViews[event.slot.index];
+            inventorySlotView?.addChild(displayObject);
+            renderer.render();
+        } else if (event.mutationType === MutationType.REMOVE) {
+            renderer.dispose();
+        }
+    });
 
     render() {
 
@@ -171,26 +233,31 @@ export default class GameRenderer {
         for (const slot of this.game.inventory) {
             const view = this.inventorySlotViews[slot.index];
             if (!view) continue;
-            slot.render(view);
+            
+            view.clear();
+            view.lineStyle(2, 0x0000ff, 0.5, 0);
+            view.beginFill(0x101010, 0.5);
+            view.drawRect(0, 0, 32, 32)
+            view.endFill();
+    
+            const item = slot.item;
+            if (item) {
+                const renderer = item.getRenderer();
+                if (renderer.shouleRerender()) {
+                    renderer.render();
+                }
+            }
         }
 
         { // render land
             const landView = this.landView;
-            for (let index = 0; index <= this.game.land.length; index++) {
-                const field = this.game.land[index];
-                const view = this.fieldViews[index];
-
-                if (!field || !view) continue;
-
-                view.clear();
-                view.lineStyle(1, 0xffffff);
-                view.beginFill(0xffffff, 0.5);
-                view.drawRect(0, 0, 32, 32);
-                view.endFill();
-
+            for (const field of this.game.land) {
                 const plant = field.plant;
                 if (!plant) continue;
-                plant.render(view);
+                const renderer = plant.getRenderer();
+                if (renderer.shouleRerender()) {
+                    renderer.render();
+                }
             }
         }
 
@@ -202,10 +269,12 @@ export default class GameRenderer {
             view.endFill();
         }
 
-        {
-            this.draggingItemView.clear();
+        if (this.draggingItemView) {
             if (this.draggingType === DraggingType.ITEM && !!this.draggingItemSlot && !!this.draggingItemSlot.item) {
-                this.draggingItemSlot.item.render(this.draggingItemView);
+                const renderer = this.draggingItemSlot.item.getRenderer();
+                if (renderer.shouleRerender()) {
+                    renderer.render();
+                }
             }
         }
     }

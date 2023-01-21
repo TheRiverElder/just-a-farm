@@ -3,6 +3,7 @@ import type Field from "../game/Field";
 import type Game from "../game/Game";
 import Item from "./Item";
 import type Plant from "../plant/Plant";
+import type Renderer from "../renderer/Renderer";
 
 export default class PlantItem extends Item {
     plant: Plant;
@@ -11,9 +12,9 @@ export default class PlantItem extends Item {
         super(game);
         this.plant = plant;
     }
-
-    render(graphics: Graphics): void {
-        this.plant.render(graphics);
+    
+    getRenderer(): Renderer {
+        return this.plant.getRenderer();
     }
 
     onUseAtField(field: Field): void {
