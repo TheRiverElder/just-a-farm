@@ -23,7 +23,7 @@ export default class WheatSeedRenderer implements Renderer {
         graphics.endFill();
     }
     
-    shouleRerender(): boolean {
+    shouldRerender(): boolean {
         return false;
     }
 

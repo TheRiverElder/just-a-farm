@@ -28,7 +28,7 @@ export function testGame(domElement: HTMLElement) {
             new WheatSeedItem(game),
         ];
         items.forEach(item => {
-            item.amount = 1;
+            item.setAmount(1);
             game.addToInventory(item);
         });
     }

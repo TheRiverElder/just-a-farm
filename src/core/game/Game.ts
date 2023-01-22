@@ -22,20 +22,18 @@ export default class Game {
         if (!plant) return;
 
         const products = plant.onHarvest(field);
-        products.forEach(item => this.addToInventory(item));
-
         field.setContent(null);
+        products.forEach(item => this.addToInventory(item));
     }
 
     use(slot: InventorySlot, field: Field) {
         const item = slot.item;
         if (!item) return;
 
-        item.onUseAtField(field);
+        item.onUseAtField(field, slot);
 
-        if (item.amount <= 0) {
+        if (item.getAmount() <= 0) {
             slot.item = null;
-            this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.REMOVE));
         }
     }
 
@@ -46,18 +44,18 @@ export default class Game {
         const replacement: Item[] = [];
 
         const oldItem = slot.item;
-        if (!!oldItem && oldItem.amount > 0) {
+        if (!!oldItem && oldItem.getAmount() > 0) {
             replacement.push(oldItem);
-            this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, oldItem, MutationType.REMOVE));
+            this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, oldItem, MutationType.DECREMENT));
         }
 
         this.storage.splice(storageIndex, 1, ...replacement);
 
-        if (item.amount <= 0) {
+        if (item.getAmount() <= 0) {
             slot.item = null;
         } else {
             slot.item = item;
-            this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.ADD));
+            this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.INCREMENT));
         }
     }
 
@@ -69,14 +67,14 @@ export default class Game {
 
         this.storage.splice(finalStorageIndex, 0, item);
         slot.item = null;
-        this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.REMOVE));
+        this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.DECREMENT));
     }
 
     addToInventory(item: Item): boolean {
         for (const slot of this.inventory) {
             if (!slot.item) {
                 slot.item = item;
-                this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.ADD));
+                this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.INCREMENT));
                 return true;
             }
         }

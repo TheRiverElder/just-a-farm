@@ -1,5 +1,5 @@
 
 export enum MutationType {
-    ADD,
-    REMOVE,
+    INCREMENT,
+    DECREMENT,
 }

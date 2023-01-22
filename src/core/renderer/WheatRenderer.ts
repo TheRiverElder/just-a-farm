@@ -25,7 +25,7 @@ export default class WheatRenderer implements Renderer {
         graphics.endFill();
     }
     
-    shouleRerender(): boolean {
+    shouldRerender(): boolean {
         return false;
     }
 

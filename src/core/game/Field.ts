@@ -19,12 +19,12 @@ export default class Field {
         const oldPlant = this.plant;
         if (oldPlant) {
             oldPlant.onRemoveFromField(this);
-            oldPlant.game.fieldPlantMutationEventDispatcher.dispatch(new FieldPlantMutationEvent(this, oldPlant, MutationType.REMOVE));
+            oldPlant.game.fieldPlantMutationEventDispatcher.dispatch(new FieldPlantMutationEvent(this, oldPlant, MutationType.DECREMENT));
         }
         this.plant = plant;
         if (plant) {
             plant.onAddToField(this);
-            plant.game.fieldPlantMutationEventDispatcher.dispatch(new FieldPlantMutationEvent(this, plant, MutationType.ADD));
+            plant.game.fieldPlantMutationEventDispatcher.dispatch(new FieldPlantMutationEvent(this, plant, MutationType.INCREMENT));
         }
         return oldPlant;
     }

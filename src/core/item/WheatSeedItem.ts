@@ -1,5 +1,5 @@
-import type { Graphics } from "pixi.js";
 import type Field from "../game/Field";
+import type InventorySlot from "../game/InventorySlot";
 import WheatPlant from "../plant/WheatPlant";
 import type Renderer from "../renderer/Renderer";
 import WheatSeedRenderer from "../renderer/WheatSeedRenderer";
@@ -13,10 +13,9 @@ export default class WheatSeedItem extends Item {
         return this.renderer;
     }
     
-    onUseAtField(field: Field): void {
-        if (this.amount < 1 || !!field.plant) return;
+    onUseAtField(field: Field, slot: InventorySlot): void {
+        if (!this.mutateAmount(-1, slot) || !!field.plant) return;
         field.setContent(new WheatPlant(this.game, 1.0 / 60));
-        this.amount--;
     }
     
 }

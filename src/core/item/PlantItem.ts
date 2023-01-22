@@ -4,6 +4,9 @@ import type Game from "../game/Game";
 import Item from "./Item";
 import type Plant from "../plant/Plant";
 import type Renderer from "../renderer/Renderer";
+import type InventorySlot from "../game/InventorySlot";
+import InventorySlotItemMutationEvent from "../event/InventorySlotItemMutationEvent";
+import { MutationType } from "../event/MutationType";
 
 export default class PlantItem extends Item {
     plant: Plant;
@@ -17,9 +20,9 @@ export default class PlantItem extends Item {
         return this.plant.getRenderer();
     }
 
-    onUseAtField(field: Field): void {
+    onUseAtField(field: Field, slot: InventorySlot): void {
+        if (!this.mutateAmount(-1, slot)) return;
         field.setContent(this.plant);
-        this.amount = 0;
     }
 
 }

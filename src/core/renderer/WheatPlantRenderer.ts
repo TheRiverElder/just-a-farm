@@ -11,7 +11,7 @@ export default class WheatPlantRenderer implements Renderer {
     readonly game: Game;
     readonly plant: Plant;
     readonly graphics: Graphics;
-    dynamic: boolean = false;
+    private dynamic: boolean = false;
     private staticImageRendered: boolean = false;
 
     constructor(plant: Plant, dynamic: boolean = false) {
@@ -19,6 +19,10 @@ export default class WheatPlantRenderer implements Renderer {
         this.plant = plant;
         this.dynamic = dynamic;
         this.graphics = new Graphics();
+    }
+
+    isDynamic() {
+        return this.dynamic;
     }
 
     setDynamic(dynamic: boolean) {
@@ -70,7 +74,7 @@ export default class WheatPlantRenderer implements Renderer {
         }
     }
     
-    shouleRerender(): boolean {
+    shouldRerender(): boolean {
         return this.dynamic || !this.staticImageRendered;
     }
 
