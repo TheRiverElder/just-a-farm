@@ -1,14 +1,14 @@
 import type { double, Nullable } from "../BaseTypes";
-import InventorySlotItemMutationEvent from "../event/InventorySlotItemMutationEvent";
-import { MutationType } from "../event/MutationType";
 import type Field from "../game/Field";
 import type Game from "../game/Game";
 import type InventorySlot from "../game/InventorySlot";
+import type ItemLocation from "../game/ItemLocation";
 import type Renderer from "../renderer/Renderer";
 
 export default abstract class Item {
     public readonly game: Game;
     private amount: double = 0;
+    public location: Nullable<ItemLocation> = null;
 
     constructor(game: Game) {
         this.game = game;
@@ -34,9 +34,8 @@ export default abstract class Item {
 
         this.amount = newAmount;
 
-        if (slot && delta !== 0) {
-            this.game.inventorySlotItemMutationEventDispatcher.dispatch(
-                new InventorySlotItemMutationEvent(slot, this, delta > 0 ? MutationType.INCREMENT : MutationType.DECREMENT));
+        if (delta !== 0) {
+            this.location?.onItemAmountMutated(this, oldAmount);
         }
 
         return true;

@@ -27,14 +27,10 @@ export default class Game {
     }
 
     use(slot: InventorySlot, field: Field) {
-        const item = slot.item;
+        const item = slot.getItem();
         if (!item) return;
 
         item.onUseAtField(field, slot);
-
-        if (item.getAmount() <= 0) {
-            slot.item = null;
-        }
     }
 
     load(storageIndex: int, slot: InventorySlot) {
@@ -43,38 +39,29 @@ export default class Game {
 
         const replacement: Item[] = [];
 
-        const oldItem = slot.item;
+        const oldItem = slot.getItem();
         if (!!oldItem && oldItem.getAmount() > 0) {
             replacement.push(oldItem);
             this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, oldItem, MutationType.DECREMENT));
         }
 
         this.storage.splice(storageIndex, 1, ...replacement);
-
-        if (item.getAmount() <= 0) {
-            slot.item = null;
-        } else {
-            slot.item = item;
-            this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.INCREMENT));
-        }
     }
 
     store(slot: InventorySlot, storageIndex: int = -1) {
-        const item = slot.item;
+        const item = slot.getItem();
         if (!item) return;
 
         const finalStorageIndex = storageIndex < 0 ? this.storage.length : Math.min(this.storage.length, storageIndex);
 
+        slot.setItem(null);
         this.storage.splice(finalStorageIndex, 0, item);
-        slot.item = null;
-        this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.DECREMENT));
     }
 
     addToInventory(item: Item): boolean {
         for (const slot of this.inventory) {
-            if (!slot.item) {
-                slot.item = item;
-                this.inventorySlotItemMutationEventDispatcher.dispatch(new InventorySlotItemMutationEvent(slot, item, MutationType.INCREMENT));
+            if (!slot.getItem()) {
+                slot.setItem(item);
                 return true;
             }
         }

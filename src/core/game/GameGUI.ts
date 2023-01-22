@@ -54,9 +54,8 @@ export default class GameGUI {
         };
 
         const handleDraggingItemPointerDown = (event: FederatedPointerEvent, slot: InventorySlot, originalView: Graphics) => {
-            const item = slot.item;
+            const item = slot.getItem();
             if (!item) return;
-
             
             this.draggingType = DraggingType.ITEM;
             this.dragging = false;
@@ -81,7 +80,7 @@ export default class GameGUI {
             switch (this.draggingType) {
                 case DraggingType.ITEM: {
                     if (isStartDragging && !this.draggingItemView && this.draggingItemSlot) {
-                        const item = this.draggingItemSlot.item;
+                        const item = this.draggingItemSlot.getItem();
                         if (item) {
                             this.draggingItemView = item.getRenderer().getDisplayObject();
                             this.app.stage.addChild(this.draggingItemView);
@@ -110,10 +109,10 @@ export default class GameGUI {
             
             this.pointerMoveStartPointerPosition = new Point();
             this.pointerMoveStartTargetPosition = new Point();
-            this.draggingItemSlot?.item?.getRenderer().dispose();
+            this.draggingItemSlot?.getItem()?.getRenderer().dispose();
 
             if (this.draggingType === DraggingType.ITEM) {
-                const item = this.draggingItemSlot.item;
+                const item = this.draggingItemSlot.getItem();
                 if (!!item) {
                     const slotView = this.inventorySlotViews[this.draggingItemSlot.index];
                     if (slotView) {
@@ -149,7 +148,7 @@ export default class GameGUI {
 
                 // g.on("click", () => console.log(`这是${slot.item?.amount || 0}个物品，位置：${slot.index}`));
                 view.on("pointerdown", (event) => {
-                    if (!slot.item) return;
+                    if (!slot.getItem()) return;
                     handleDraggingItemPointerDown(event, slot, view);
                 });
                 view.on("pointermove", (event) => {
@@ -222,12 +221,12 @@ export default class GameGUI {
     private readonly fieldPlantMutationEventListener = new WrapperEventListener<FieldPlantMutationEvent>((event) => {
         console.log(event);
         const renderer = event.plant.getRenderer();
-        if (event.mutationType === MutationType.INCREMENT) {
+        if (event.mutationType === MutationType.ADDED) {
             const displayObject = renderer.getDisplayObject();
             const fieldView: Graphics = this.fieldViews.get(event.field.uid);
             fieldView?.addChild(displayObject);
             renderer.render();
-        } else if (event.mutationType === MutationType.DECREMENT) {
+        } else if (event.mutationType === MutationType.REMOVED) {
             renderer.dispose();
         }
     });
@@ -235,12 +234,12 @@ export default class GameGUI {
     private readonly inventorySlotItemMutationEventListener = new WrapperEventListener<InventorySlotItemMutationEvent>((event) => {
         console.log(event);
         const renderer = event.item.getRenderer();
-        if (event.mutationType === MutationType.INCREMENT) {
+        if (event.mutationType === MutationType.ADDED) {
             const displayObject = renderer.getDisplayObject();
             const inventorySlotView: Graphics = this.inventorySlotViews[event.slot.index];
             inventorySlotView?.addChild(displayObject);
             renderer.render();
-        } else if (event.mutationType === MutationType.DECREMENT && event.item.getAmount() <= 0) {
+        } else if (event.mutationType === MutationType.REMOVED) {
             renderer.dispose();
         }
     });
@@ -252,7 +251,7 @@ export default class GameGUI {
             const view = this.inventorySlotViews[slot.index];
             if (!view) continue;
     
-            const item = slot.item;
+            const item = slot.getItem();
             if (item) {
                 const renderer = item.getRenderer();
                 if (renderer.shouldRerender()) {
@@ -282,8 +281,8 @@ export default class GameGUI {
         }
 
         if (this.draggingItemView) {
-            if (this.draggingType === DraggingType.ITEM && !!this.draggingItemSlot && !!this.draggingItemSlot.item) {
-                const renderer = this.draggingItemSlot.item.getRenderer();
+            if (this.draggingType === DraggingType.ITEM && !!this.draggingItemSlot && !!this.draggingItemSlot.getItem()) {
+                const renderer = this.draggingItemSlot.getItem().getRenderer();
                 if (renderer.shouldRerender()) {
                     renderer.render();
                 }
