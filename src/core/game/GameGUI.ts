@@ -1,4 +1,4 @@
-import { Application, Container, DisplayObject, FederatedPointerEvent, Graphics, Matrix, Point, Rectangle } from "pixi.js";
+import { Application, Container, DisplayObject, FederatedPointerEvent, Graphics, Matrix, Point, Rectangle, Text, TextMetrics, TextStyle } from "pixi.js";
 import type Game from "./Game";
 import "@pixi/math-extras";
 import type InventorySlot from "./InventorySlot";
@@ -25,6 +25,7 @@ export default class GameGUI {
     private draggingItemView: Nullable<DisplayObject> = null;
 
     private inventorySlotViews: Graphics[] = [];
+    private inventorySlotAmountViews: Text[] = [];
     private fieldViews = new Map<int, Graphics>();
 
 
@@ -132,7 +133,16 @@ export default class GameGUI {
         { // initialize inventory view
             this.inventoryView.zIndex = 10;
 
-            this.inventorySlotViews = this.game.inventory.map(slot => {
+            const amountViewStyle = new TextStyle({
+                fontSize: 12,
+                // stroke: "white",
+                // fill: "black",
+                fill: "white",
+                // strokeThickness: 0.5,
+            });
+
+            this.inventorySlotViews = [];
+            this.game.inventory.forEach(slot => {
                 const view = new Graphics();
                 view.width = 32;
                 view.height = 32;
@@ -145,6 +155,11 @@ export default class GameGUI {
                 view.beginFill(0x101010, 0.5);
                 view.drawRect(0, 0, 32, 32)
                 view.endFill();
+
+                const amountView = new Text("", amountViewStyle);
+                amountView.position = new Point(32, 32);
+
+                view.addChild(amountView);
 
                 // g.on("click", () => console.log(`这是${slot.item?.amount || 0}个物品，位置：${slot.index}`));
                 view.on("pointerdown", (event) => {
@@ -160,7 +175,8 @@ export default class GameGUI {
                     // this.game.inventorySwap();
                 }); 
 
-                return view;
+                this.inventorySlotViews.push(view);
+                this.inventorySlotAmountViews.push(amountView);
             });
 
             this.inventoryView.addChild(...this.inventorySlotViews);
@@ -224,7 +240,7 @@ export default class GameGUI {
         if (event.mutationType === MutationType.ADDED) {
             const displayObject = renderer.getDisplayObject();
             const fieldView: Graphics = this.fieldViews.get(event.field.uid);
-            fieldView?.addChild(displayObject);
+            fieldView?.addChildAt(displayObject, 0);
             renderer.render();
         } else if (event.mutationType === MutationType.REMOVED) {
             renderer.dispose();
@@ -237,10 +253,26 @@ export default class GameGUI {
         if (event.mutationType === MutationType.ADDED) {
             const displayObject = renderer.getDisplayObject();
             const inventorySlotView: Graphics = this.inventorySlotViews[event.slot.index];
-            inventorySlotView?.addChild(displayObject);
+            inventorySlotView?.addChildAt(displayObject, 0);
             renderer.render();
         } else if (event.mutationType === MutationType.REMOVED) {
             renderer.dispose();
+        }
+
+        const amountView: Text = this.inventorySlotAmountViews[event.slot.index];
+        if (amountView) {
+            if (event.mutationType in [MutationType.ADDED, MutationType.INCREMENT, MutationType.DECREMENT]) {
+                const amount = event.item.getAmount();
+                const isDigit = Number.isInteger(amount);
+                const text: string = isDigit ? amount.toString() : amount.toFixed(1);
+                const metrics = TextMetrics.measureText(text, amountView.style);
+                amountView.position.set(28 - metrics.width, 28 - metrics.height);
+                amountView.text = text;
+            } else if (event.mutationType === MutationType.REMOVED) {
+                amountView.position.set(32, 32);
+                amountView.text = "";
+            }
+            // amountView.updateText(false);
         }
     });
 
